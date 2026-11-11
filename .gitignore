@@ -1,0 +1,38 @@
+# FormulaAI — .gitignore
+
+# ── Python ─────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# ── Environment & Secrets ──────────────────────────────────────────────────────
+.env
+*.env.local
+
+# ── IDE ────────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+
+# ── OS ─────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+

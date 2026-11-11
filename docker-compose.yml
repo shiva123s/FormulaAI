@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # ── Graph Database ──────────────────────────────────────────────────────────
+  neo4j:
+    image: neo4j:5.21
+    container_name: formulaai-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474" # HTTP Browser
+      - "7687:7687" # Bolt Protocol
+    environment:
+      - NEO4J_AUTH=${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-password}
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+
+  # ── Message Broker & Cache ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: formulaai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # ── FastAPI Backend ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: formulaai-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Map container-internal hostnames
+      - NEO4J_URI=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - neo4j
+      - redis
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── Celery Worker (Pipeline Runner) ─────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: formulaai-celery
+    restart: unless-stopped
+    environment:
+      # Ensure worker talks to the same internal network addresses
+      - NEO4J_URI=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - neo4j
+      - redis
+      - api
+    # Using pool=threads is safer for tasks that wrap asyncio.run() internally
+    command: celery -A pipeline.orchestrator.celery_app worker --loglevel=info --pool=threads --concurrency=4
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  redis_data:

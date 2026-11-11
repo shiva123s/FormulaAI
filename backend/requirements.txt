@@ -1,0 +1,49 @@
+# ── Phase 1 (existing) ───────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn==0.30.1
+neo4j==5.21.0
+redis==5.0.4
+websockets==12.0
+python-dotenv==1.0.1
+
+# ── Phase 2: Configuration ──────────────────────────────────────────────────
+pydantic-settings>=2.3
+
+# ── Phase 2: Async HTTP & Resilience ────────────────────────────────────────
+httpx>=0.27
+tenacity>=8.2
+aiolimiter>=1.1
+
+# ── Phase 2: Chemical Normalization ─────────────────────────────────────────
+rdkit>=2024.3.1
+pubchempy>=1.0.4
+
+# ── Phase 2: Biological Normalization ───────────────────────────────────────
+biopython>=1.83
+
+# ── Phase 2: Document Parsing & Scraping ────────────────────────────────────
+beautifulsoup4>=4.12
+lxml>=5.0
+
+# ── Phase 2: Testing ────────────────────────────────────────────────────────
+pytest>=8.0
+pytest-asyncio>=0.23
+respx>=0.21
+
+# ── Phase 3: PDF Parsing ────────────────────────────────────────────────────
+docling>=2.0
+
+# ── Phase 3: LLM Extraction (Google Gemini — NO OpenAI) ─────────────────────
+google-generativeai>=0.8.0
+instructor>=1.3.0
+
+# ── Phase 4: Pipeline Orchestration ─────────────────────────────────────────
+celery>=5.4
+
+# ── Phase 3 (Multi-Agent): LangGraph & LangChain ─────────────────────────────
+langchain>=0.2.0
+langchain-google-genai>=2.0.0
+langgraph>=0.1.0
+
+# ── Phase 5: Snowflake Enterprise C-RAG (Patent Search) ─────────────────────
+snowflake-connector-python[pandas]>=3.10
