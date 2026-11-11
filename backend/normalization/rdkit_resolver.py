@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 # ── Conditional RDKit import ─────────────────────────────────────────────────
 try:
-    from rdkit import Chem
-    from rdkit.Chem import Descriptors, rdMolDescriptors, inchi as rdkit_inchi
+    from rdkit import Chem  # type: ignore
+    from rdkit.Chem import Descriptors, rdMolDescriptors, inchi as rdkit_inchi  # type: ignore
 
     RDKIT_AVAILABLE = True
 except ImportError:
