@@ -86,3 +86,4 @@ class TestPatentSearchTool:
         assert res["status"] == "success"
         assert len(res["patents"]) == 1
         assert res["patents"][0]["patent_id"] == "US-TEST-1"
+

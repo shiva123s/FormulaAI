@@ -81,7 +81,7 @@ FastAPI WebSocket Streaming           ✅ COMPLETE     /ws/agent-stream endpoint
 LangGraph Multi-Agent Pipeline        ✅ COMPLETE     invoke_with_tools() loop handles tool calls + fallback
 Snowflake Patent C-RAG Integration    ✅ COMPLETE     Client + fallback patents when Snowflake unreachable
 Celery Pipeline Normalization Step    ✅ COMPLETE     compute_properties() / resolve_by_name() aligned
-Test Suite                            ⚠️ PARTIAL      test_ingestion.py exists; agents/pipeline untested
+Test Suite                            ✅ COMPLETE     Unit tests for Ingestion, Agents/Tools, Snowflake, Normalization
 Docker Compose                        ✅ COMPLETE     Neo4j, Redis, API, Celery worker services defined
 ```
 

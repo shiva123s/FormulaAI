@@ -46,3 +46,4 @@ class TestRDKitResolver:
         assert isinstance(res, ChemicalIdentity)
         assert res.is_valid is False
         assert res.canonical_smiles is None
+
