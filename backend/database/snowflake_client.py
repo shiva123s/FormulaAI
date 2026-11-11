@@ -39,6 +39,14 @@ def get_snowflake_connection() -> snowflake.connector.SnowflakeConnection:
         database = os.getenv("SNOWFLAKE_DATABASE", "FORMULA_KNOWLEDGE_DB")
         schema = os.getenv("SNOWFLAKE_SCHEMA", "GLOBAL_PATENTS")
 
+    # Strip any accidental whitespace or wrapping quotes from .env
+    account = account.strip().strip('"\'')
+    user = user.strip().strip('"\'')
+    password = password.strip().strip('"\'')
+    warehouse = warehouse.strip().strip('"\'')
+    database = database.strip().strip('"\'')
+    schema = schema.strip().strip('"\'')
+
     if not all([account, user, password]):
         raise ValueError(
             "Missing required Snowflake credentials. "

@@ -1,0 +1,10 @@
+{
+  "include": [
+    "."
+  ],
+  "extraPaths": [
+    "."
+  ],
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false
+}
