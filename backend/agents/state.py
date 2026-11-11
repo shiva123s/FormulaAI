@@ -4,7 +4,7 @@ FormulaAI — Multi-Agent State Definition
 Defines the shared memory (State) passed between the LangGraph nodes.
 """
 from typing import TypedDict, Annotated, Sequence, Literal
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage  # type: ignore
 import operator
 
 class FormulationState(TypedDict):

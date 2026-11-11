@@ -9,7 +9,7 @@ patents or TDS documents) to ground their formulation designs.
 """
 
 import json
-from langchain_core.tools import tool
+from langchain_core.tools import tool  # type: ignore
 from graph.connection import get_neo4j
 from database.snowflake_client import query_patents_to_dataframe
 

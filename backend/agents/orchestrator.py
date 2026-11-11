@@ -4,7 +4,7 @@ FormulaAI — Agent Orchestrator
 Provides the entry point to run the compiled LangGraph pipeline.
 """
 import asyncio
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage  # type: ignore
 from fastapi import WebSocket
 from agents.graph import formulation_graph
 
@@ -96,7 +96,7 @@ async def run_formulation_agent(
                     try:
                         from pydantic import BaseModel, Field
                         from typing import List, Optional
-                        from langchain_google_genai import ChatGoogleGenerativeAI
+                        from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
                         from config import get_settings
 
                         class RecipeItem(BaseModel):
