@@ -1,0 +1,10 @@
+# FormulaAI — Continuous Patent Ingestion Dependencies (Lightweight)
+# Specifically curated for the scheduled patent ingestion workflow to run in seconds.
+
+requests>=2.31.0
+snowflake-connector-python[pandas]>=3.10.0
+python-dotenv>=1.0.1
+pydantic-settings>=2.3.0
+httpx>=0.27.0
+tenacity>=8.2.0
+aiolimiter>=1.1.0

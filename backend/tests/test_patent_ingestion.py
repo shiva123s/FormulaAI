@@ -89,3 +89,4 @@ def test_load_patents_to_snowflake_mocked():
         assert mock_cursor.executemany.call_count == 1
         mock_cursor.close.assert_called_once()
         mock_conn.close.assert_called_once()
+
