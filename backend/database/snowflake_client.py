@@ -31,30 +31,25 @@ def get_snowflake_connection():
     Creates and returns a Snowflake connection object using credentials
     from centralized Settings (preferred) or os.getenv fallback.
     """
-    if not SNOWFLAKE_AVAILABLE:
-        raise ImportError(
-            "snowflake-connector-python is not installed. "
-            "Run: pip install snowflake-connector-python[pandas]"
-        )
     # Read from Pydantic Settings; fall back to raw env vars
     try:
         from config import get_settings
         _settings = get_settings()
-        account = _settings.snowflake_account or os.getenv("SNOWFLAKE_ACCOUNT", "")
-        user = _settings.snowflake_user or os.getenv("SNOWFLAKE_USER", "")
-        password = _settings.snowflake_password or os.getenv("SNOWFLAKE_PASSWORD", "")
-        warehouse = _settings.snowflake_warehouse or os.getenv("SNOWFLAKE_WAREHOUSE", "FORMULA_APP_WH")
-        database = _settings.snowflake_database or os.getenv("SNOWFLAKE_DATABASE", "FORMULA_KNOWLEDGE_DB")
-        schema = _settings.snowflake_schema or os.getenv("SNOWFLAKE_SCHEMA", "GLOBAL_PATENTS")
-        role = _settings.snowflake_role or os.getenv("SNOWFLAKE_ROLE", "")
+        account = os.environ.get("SNOWFLAKE_ACCOUNT", _settings.snowflake_account)
+        user = os.environ.get("SNOWFLAKE_USER", _settings.snowflake_user)
+        password = os.environ.get("SNOWFLAKE_PASSWORD", _settings.snowflake_password)
+        warehouse = os.environ.get("SNOWFLAKE_WAREHOUSE", _settings.snowflake_warehouse)
+        database = os.environ.get("SNOWFLAKE_DATABASE", _settings.snowflake_database)
+        schema = os.environ.get("SNOWFLAKE_SCHEMA", _settings.snowflake_schema)
+        role = os.environ.get("SNOWFLAKE_ROLE", _settings.snowflake_role)
     except Exception:
-        account = os.getenv("SNOWFLAKE_ACCOUNT", "")
-        user = os.getenv("SNOWFLAKE_USER", "")
-        password = os.getenv("SNOWFLAKE_PASSWORD", "")
-        warehouse = os.getenv("SNOWFLAKE_WAREHOUSE", "FORMULA_APP_WH")
-        database = os.getenv("SNOWFLAKE_DATABASE", "FORMULA_KNOWLEDGE_DB")
-        schema = os.getenv("SNOWFLAKE_SCHEMA", "GLOBAL_PATENTS")
-        role = os.getenv("SNOWFLAKE_ROLE", "")
+        account = os.environ.get("SNOWFLAKE_ACCOUNT", "")
+        user = os.environ.get("SNOWFLAKE_USER", "")
+        password = os.environ.get("SNOWFLAKE_PASSWORD", "")
+        warehouse = os.environ.get("SNOWFLAKE_WAREHOUSE", "FORMULA_APP_WH")
+        database = os.environ.get("SNOWFLAKE_DATABASE", "FORMULA_KNOWLEDGE_DB")
+        schema = os.environ.get("SNOWFLAKE_SCHEMA", "GLOBAL_PATENTS")
+        role = os.environ.get("SNOWFLAKE_ROLE", "")
 
     # Strip any accidental whitespace or wrapping quotes from .env
     account = account.strip().strip('"\'')
@@ -69,6 +64,12 @@ def get_snowflake_connection():
         raise ValueError(
             "Missing required Snowflake credentials. "
             "Set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, and SNOWFLAKE_PASSWORD in backend/.env"
+        )
+
+    if not SNOWFLAKE_AVAILABLE:
+        raise ImportError(
+            "snowflake-connector-python is not installed. "
+            "Run: pip install snowflake-connector-python[pandas]"
         )
 
     connect_kwargs = {

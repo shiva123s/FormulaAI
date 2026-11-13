@@ -114,3 +114,4 @@ venv\Scripts\python.exe -m pytest tests/
 
 ## 📄 License
 MIT License.
+
