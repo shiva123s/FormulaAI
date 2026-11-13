@@ -7,8 +7,18 @@ Enterprise Patent C-RAG warehouse (FORMULA_KNOWLEDGE_DB.GLOBAL_PATENTS).
 
 import os
 import logging
-import pandas as pd
-import snowflake.connector
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None  # type: ignore
+
+try:
+    import snowflake.connector  # type: ignore
+    SNOWFLAKE_AVAILABLE = True
+except ImportError:
+    SNOWFLAKE_AVAILABLE = False
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,11 +26,16 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def get_snowflake_connection() -> snowflake.connector.SnowflakeConnection:
+def get_snowflake_connection():
     """
     Creates and returns a Snowflake connection object using credentials
     from centralized Settings (preferred) or os.getenv fallback.
     """
+    if not SNOWFLAKE_AVAILABLE:
+        raise ImportError(
+            "snowflake-connector-python is not installed. "
+            "Run: pip install snowflake-connector-python[pandas]"
+        )
     # Read from Pydantic Settings; fall back to raw env vars
     try:
         from config import get_settings
@@ -31,6 +46,7 @@ def get_snowflake_connection() -> snowflake.connector.SnowflakeConnection:
         warehouse = _settings.snowflake_warehouse or os.getenv("SNOWFLAKE_WAREHOUSE", "FORMULA_APP_WH")
         database = _settings.snowflake_database or os.getenv("SNOWFLAKE_DATABASE", "FORMULA_KNOWLEDGE_DB")
         schema = _settings.snowflake_schema or os.getenv("SNOWFLAKE_SCHEMA", "GLOBAL_PATENTS")
+        role = _settings.snowflake_role or os.getenv("SNOWFLAKE_ROLE", "")
     except Exception:
         account = os.getenv("SNOWFLAKE_ACCOUNT", "")
         user = os.getenv("SNOWFLAKE_USER", "")
@@ -38,6 +54,7 @@ def get_snowflake_connection() -> snowflake.connector.SnowflakeConnection:
         warehouse = os.getenv("SNOWFLAKE_WAREHOUSE", "FORMULA_APP_WH")
         database = os.getenv("SNOWFLAKE_DATABASE", "FORMULA_KNOWLEDGE_DB")
         schema = os.getenv("SNOWFLAKE_SCHEMA", "GLOBAL_PATENTS")
+        role = os.getenv("SNOWFLAKE_ROLE", "")
 
     # Strip any accidental whitespace or wrapping quotes from .env
     account = account.strip().strip('"\'')
@@ -46,6 +63,7 @@ def get_snowflake_connection() -> snowflake.connector.SnowflakeConnection:
     warehouse = warehouse.strip().strip('"\'')
     database = database.strip().strip('"\'')
     schema = schema.strip().strip('"\'')
+    role = role.strip().strip('"\'') if role else ""
 
     if not all([account, user, password]):
         raise ValueError(
@@ -53,16 +71,20 @@ def get_snowflake_connection() -> snowflake.connector.SnowflakeConnection:
             "Set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, and SNOWFLAKE_PASSWORD in backend/.env"
         )
 
-    conn = snowflake.connector.connect(
-        account=account,
-        user=user,
-        password=password,
-        warehouse=warehouse,
-        database=database,
-        schema=schema,
-        login_timeout=15,
-        network_timeout=30,
-    )
+    connect_kwargs = {
+        "account": account,
+        "user": user,
+        "password": password,
+        "warehouse": warehouse,
+        "database": database,
+        "schema": schema,
+        "login_timeout": 15,
+        "network_timeout": 30,
+    }
+    if role:
+        connect_kwargs["role"] = role
+
+    conn = snowflake.connector.connect(**connect_kwargs)
 
     logger.info("Snowflake connection established (warehouse=%s)", conn.warehouse)
     return conn

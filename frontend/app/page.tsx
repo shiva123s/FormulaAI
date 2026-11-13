@@ -46,7 +46,10 @@ export default function FormulaAIDashboard() {
     });
 
     try {
-      const ws = new WebSocket("ws://localhost:8000/ws/agent-stream");
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname || 'localhost';
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${host}:8000/ws/agent-stream`;
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {

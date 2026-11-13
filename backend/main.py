@@ -1,19 +1,44 @@
 import os
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from neo4j import GraphDatabase
-import redis.asyncio as redis
-from dotenv import load_dotenv
-from celery.result import AsyncResult
 
-from db_init import initialize_db
-from graph.connection import get_neo4j
-from graph.schema import GraphSchema
+try:
+    from neo4j import GraphDatabase  # type: ignore
+    from graph.connection import get_neo4j  # type: ignore
+    from graph.schema import GraphSchema  # type: ignore
+    NEO4J_AVAILABLE = True
+except ImportError:
+    get_neo4j = None  # type: ignore
+    GraphSchema = None  # type: ignore
+    NEO4J_AVAILABLE = False
+
+try:
+    import redis.asyncio as redis  # type: ignore
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None  # type: ignore
+    REDIS_AVAILABLE = False
+
+from dotenv import load_dotenv
+
+try:
+    from celery.result import AsyncResult  # type: ignore
+    from pipeline.orchestrator import run_extraction_pipeline, celery_app  # type: ignore
+    CELERY_AVAILABLE = True
+except ImportError:
+    CELERY_AVAILABLE = False
+
+try:
+    from agents.orchestrator import run_formulation_agent  # type: ignore
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    run_formulation_agent = None  # type: ignore
+    AGENTS_AVAILABLE = False
+
 from pipeline.models import PipelineJobRequest, PipelineJobResponse, PipelineStatus
-from pipeline.orchestrator import run_extraction_pipeline, celery_app
-from agents.orchestrator import run_formulation_agent
 
 load_dotenv()
 
@@ -27,20 +52,55 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize Neo4j schema using Phase 2 modules
-    neo4j = get_neo4j()
-    await neo4j.connect()
-    schema = GraphSchema(neo4j)
-    await schema.initialize()
-    
-    # Setup global connections
-    app.state.redis_client = redis.from_url(REDIS_URL)
-    
+    # Initialize Neo4j schema using Phase 2 modules (with graceful degraded fallback)
+    if NEO4J_AVAILABLE and get_neo4j is not None and GraphSchema is not None:
+        neo4j = get_neo4j()
+        try:
+            await asyncio.wait_for(neo4j.connect(), timeout=2.0)
+            schema = GraphSchema(neo4j)
+            await asyncio.wait_for(schema.initialize(), timeout=2.0)
+            logger.info("Neo4j initialized successfully.")
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.warning("Neo4j not reachable (%s); running in degraded mode.", e)
+    else:
+        logger.warning("neo4j driver not installed; running in degraded mode.")
+
+    # Setup global connections (with graceful degraded fallback)
+    if REDIS_AVAILABLE and redis is not None:
+        try:
+            app.state.redis_client = redis.from_url(REDIS_URL, socket_connect_timeout=1.5, socket_timeout=1.5)
+            await asyncio.wait_for(app.state.redis_client.ping(), timeout=1.5)
+            logger.info("Redis connected successfully.")
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.warning("Redis not reachable (%s); running in degraded mode.", e)
+            app.state.redis_client = None
+    else:
+        logger.warning("Redis client package is not installed; running in degraded mode.")
+        app.state.redis_client = None
+
+    print("\n" + "=" * 65)
+    print("🚀 FormulaAI Backend started successfully!")
+    print("📡 Local API URL:       http://127.0.0.1:8000")
+    print("📖 Interactive Docs:    http://127.0.0.1:8000/docs")
+    print("💓 Health Check:        http://127.0.0.1:8000/health")
+    print("⚡ WebSocket Streaming: ws://127.0.0.1:8000/ws/agent-stream")
+    print("💡 Status: Server is active and listening. (Press Ctrl+C to stop)")
+    print("=" * 65 + "\n", flush=True)
+
     yield
-    
+
     # Cleanup
-    await neo4j.close()
-    await app.state.redis_client.close()
+    if NEO4J_AVAILABLE and get_neo4j is not None:
+        try:
+            neo4j = get_neo4j()
+            await neo4j.close()
+        except Exception:
+            pass
+    if getattr(app.state, "redis_client", None) is not None:
+        try:
+            await app.state.redis_client.close()
+        except Exception:
+            pass
 
 app = FastAPI(title="FormulaAI API", lifespan=lifespan)
 
@@ -55,27 +115,38 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
-    neo4j = get_neo4j()
     status = {"status": "ok", "neo4j": "unknown", "redis": "unknown"}
     
     # Check Neo4j
-    try:
-        if neo4j.is_connected:
-            neo4j.driver.verify_connectivity()
-            status["neo4j"] = "connected"
-        else:
-            status["neo4j"] = "disconnected"
-    except Exception as e:
-        status["neo4j"] = f"error: {str(e)}"
+    if not NEO4J_AVAILABLE or get_neo4j is None:
+        status["neo4j"] = "driver not installed"
         status["status"] = "degraded"
+    else:
+        neo4j = get_neo4j()
+        try:
+            if neo4j.is_connected:
+                await asyncio.wait_for(neo4j.driver.verify_connectivity(), timeout=1.5)
+                status["neo4j"] = "connected"
+            else:
+                status["neo4j"] = "disconnected"
+        except Exception as e:
+            status["neo4j"] = f"error: {str(e)}"
+            status["status"] = "degraded"
         
     # Check Redis
-    try:
-        await app.state.redis_client.ping()
-        status["redis"] = "connected"
-    except Exception as e:
-        status["redis"] = f"error: {str(e)}"
+    if not REDIS_AVAILABLE:
+        status["redis"] = "client not installed"
         status["status"] = "degraded"
+    else:
+        try:
+            if getattr(app.state, "redis_client", None) is not None:
+                await asyncio.wait_for(app.state.redis_client.ping(), timeout=1.5)
+                status["redis"] = "connected"
+            else:
+                status["redis"] = "disconnected"
+        except Exception as e:
+            status["redis"] = f"error: {str(e)}"
+            status["status"] = "degraded"
         
     return status
 
@@ -118,6 +189,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
                 continue
                 
+            if not AGENTS_AVAILABLE or run_formulation_agent is None:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "LangChain/LangGraph dependencies not installed. In terminal run: pip install langchain langchain-core langchain-google-genai langgraph"
+                })
+                await websocket.send_json({"type": "pipeline_complete"})
+                continue
+
             # Trigger the multi-agent formulation pipeline
             try:
                 await run_formulation_agent(
@@ -148,6 +227,12 @@ async def start_pipeline_job(request: PipelineJobRequest):
     """
     Trigger a new extraction pipeline job via Celery.
     """
+    if not CELERY_AVAILABLE:
+        return PipelineJobResponse(
+            job_id="celery_unavailable",
+            status="failed",
+            message="Celery is not installed in the current environment. Run pipeline via docker-compose up or install celery."
+        )
     task = run_extraction_pipeline.delay(request.source_type, request.source_args)
     return PipelineJobResponse(
         job_id=task.id,
@@ -160,6 +245,12 @@ async def get_pipeline_status(job_id: str):
     """
     Check the status of a Celery pipeline job.
     """
+    if not CELERY_AVAILABLE:
+        return PipelineStatus(
+            job_id=job_id,
+            status="FAILED",
+            error="Celery is not installed in the current Python environment."
+        )
     task_result = AsyncResult(job_id, app=celery_app)
     
     return PipelineStatus(

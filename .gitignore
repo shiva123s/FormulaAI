@@ -1,6 +1,6 @@
-# FormulaAI — .gitignore
+# FormulaAI — Root .gitignore
 
-# ── Python ─────────────────────────────────────────────────────────────────────
+# ── Python & Bytecode ─────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,29 +10,48 @@ dist/
 build/
 *.egg
 
-# Virtual Environments
+# ── Virtual Environments ──────────────────────────────────────────────────────
 venv/
 .venv/
 env/
+backend/venv/
+backend/.venv/
 
-# ── Environment & Secrets ──────────────────────────────────────────────────────
+# ── Environment & Secrets ─────────────────────────────────────────────────────
 .env
-*.env.local
+.env.*
+*.env
+*.env.*
+backend/.env
+backend/.env.*
+frontend/.env*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
-# ── IDE ────────────────────────────────────────────────────────────────────────
+# ── Node / Frontend / Build Artifacts ──────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+frontend/out/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Testing & Coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDE & Editor ──────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# ── Node / Frontend ───────────────────────────────────────────────────────────
-node_modules/
-.next/
-out/
-
-# ── OS ─────────────────────────────────────────────────────────────────────────
+# ── OS Generated Files ────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
-

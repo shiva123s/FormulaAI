@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     snowflake_warehouse: str = Field("FORMULA_APP_WH", alias="SNOWFLAKE_WAREHOUSE")
     snowflake_database: str = Field("FORMULA_KNOWLEDGE_DB", alias="SNOWFLAKE_DATABASE")
     snowflake_schema: str = Field("GLOBAL_PATENTS", alias="SNOWFLAKE_SCHEMA")
+    snowflake_role: str = Field("", alias="SNOWFLAKE_ROLE")
 
     @property
     def is_snowflake_configured(self) -> bool:

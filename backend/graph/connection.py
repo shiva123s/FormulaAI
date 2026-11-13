@@ -55,7 +55,7 @@ class Neo4jConnection:
         username: str | None = None,
         password: str | None = None,
         max_connection_pool_size: int = 50,
-        connection_timeout: float = 30.0,
+        connection_timeout: float = 3.0,
     ):
         settings = get_settings()
         self._uri = uri or settings.neo4j_uri
